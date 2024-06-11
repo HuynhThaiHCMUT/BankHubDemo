@@ -13,9 +13,9 @@ block content
         showTransactions(body);
       } else {
         if (body.message) {
-          showToast(body.message);
+          showDangerToast(body.message);
         } else {
-          showToast("Đã có lỗi xảy ra");
+          showDangerToast("Đã có lỗi xảy ra");
         }
         
       }
@@ -26,19 +26,27 @@ block content
       body = await res.json();
       if (res.ok) {
         document.getElementById('linkTable').deleteRow(data.findIndex((value) => value.grantId == grantId) + 1)
-        showToast("Xoá kết nối thành công")
+        showSuccessToast("Xoá kết nối thành công")
       } else {
         if (body.state) {
-          showToast(body.state);
+          showDangerToast(body.state);
         } else {
-          showToast("Đã có lỗi xảy ra");
+          showDangerToast("Đã có lỗi xảy ra");
         }
       }
     }
 
-    function showToast(message) {
-      const toastElement = document.getElementById('toast');
-      const toastMessage = document.getElementById('toastMessage');
+    function showDangerToast(message) {
+      const toastElement = document.getElementById('dangerToast');
+      const toastMessage = document.getElementById('dangerToastMessage');
+      toastMessage.textContent = message;
+      const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+      toast.show();
+    }
+
+    function showSuccessToast(message) {
+      const toastElement = document.getElementById('successToast');
+      const toastMessage = document.getElementById('successToastMessage');
       toastMessage.textContent = message;
       const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
       toast.show();
@@ -147,9 +155,17 @@ block content
             
 
     .toast-container.position-fixed.bottom-0.end-0.p-5
-        .toast#toast
+        .toast#dangerToast
           .toast-header.bg-danger
             strong.me-auto.text-light Error
             button.btn-close(type='button', data-bs-dismiss='toast', aria-label='Close')
           .toast-body
-            #toastMessage
+            #dangerToastMessage
+
+    .toast-container.position-fixed.bottom-0.end-0.p-5
+        .toast#successToast
+          .toast-header.bg-success
+            strong.me-auto.text-light Success
+            button.btn-close(type='button', data-bs-dismiss='toast', aria-label='Close')
+          .toast-body
+            #successToastMessage
