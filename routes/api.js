@@ -54,14 +54,13 @@ router.get('/callback', function(req, res) {
         }).then((value) => {
             data = {
                 $grantId: value.data.grantId,
-                $accessToken: value.data.accessToken
+                $accessToken: value.data.accessToken,
+                $time: (new Date()).getTime()
             }
-            console.log(value.data)
-            console.log(data)
 
             const insertQuery = `
-            INSERT INTO link (grantId, accessToken)
-            VALUES ($grantId, $accessToken)
+            INSERT INTO link (grantId, accessToken, time)
+            VALUES ($grantId, $accessToken, $time)
             `;
             db.run(insertQuery, data, function(err) {
                 if (err) {
@@ -76,6 +75,49 @@ router.get('/callback', function(req, res) {
             res.redirect('../cancel?type=exchangeFailed');
         })
     }
+})
+
+router.get('/transactions', function(req, res) {
+    grantId = req.query.id
+    if (!grantId) {
+        res.status(400).send({
+            message: "Missing grantId"
+        })
+    } else {
+        db.get("SELECT accessToken FROM link WHERE grantId = ?", grantId, (err, row) => {
+            if (err) {
+                res.status(500).send({
+                    message: "Server database error"
+                })
+            }
+            if (!row || !row.accessToken) {
+                res.status(404).send({
+                    message: "Grant ID not found"
+                })
+            }
+            axios({
+                url: `${bankHubUrl}/transactions`,
+                method: 'get',
+                baseURL: bankHubUrl,
+                headers: {
+                    'x-client-id': clientId,
+                    'x-secret-key': secretKey,
+                    'Authorization': row.accessToken
+                },
+            }).then((value) => {
+                res.send(value.data)
+            }).catch((reason) => {
+                console.log(reason)
+                res.status(502).send({
+                    message: "Can't get transactions data from bankHub"
+                })
+            })
+        })
+    }
+})
+
+router.delete('/delete', function(req, res) {
+    
 })
 
 module.exports = router

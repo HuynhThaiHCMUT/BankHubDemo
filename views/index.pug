@@ -1,5 +1,137 @@
 extends layout
 
 block content
-    form.h-100.d-flex.align-items-center.justify-content-center(action="/api/link", method="post")
+  script(src='https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js', integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r", crossorigin="anonymous")
+  script(src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js', integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy", crossorigin="anonymous")
+  script.
+    async function handleView(grantId) {
+      res = await fetch(`/api/transactions?id=${grantId}`)
+      body = await res.json()
+      if (res.ok) {
+        showTransactions(body)
+      } else {
+        showToast(body.message)
+      }
+    }
+
+    async function handleDelete(grantId) {
+      fetch(`/api/delete?id=${grantId}`, {method: 'DELETE'});
+    }
+
+    function showToast(message) {
+      const toastElement = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      toastMessage.textContent = message;
+      const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+      toast.show();
+    }
+
+    function showTransactions(data) {
+      const transactions = document.getElementById('transactions');
+      transactions.addEventListener('show.bs.modal', event => {
+        const accountsTable = document.getElementById('accountsTable');
+        const transactionsTable = document.getElementById('transactionsTable');
+        data.accounts.forEach(row => {
+          const tr = document.createElement('tr');
+
+          const accountNumber = document.createElement('td');
+          accountNumber.textContent = row.accountNumber;
+          tr.appendChild(accountNumber);
+
+          const accountName = document.createElement('td');
+          accountNumber.textContent = row.accountName;
+          tr.appendChild(accountName);
+
+          const currency = document.createElement('td');
+          currency.textContent = row.currency;
+          tr.appendChild(currency);
+
+          const balance = document.createElement('td');
+          balance.textContent = row.balance;
+          tr.appendChild(balance);
+
+          accountsTable.appendChild(tr);
+        })
+        data.transactions.forEach(row => {
+          const tr = document.createElement('tr');
+
+          const accountNumber = document.createElement('td');
+          accountNumber.textContent = row.accountNumber;
+          tr.appendChild(accountNumber);
+
+          const amount = document.createElement('td');
+          amount.textContent = row.amount;
+          tr.appendChild(amount);
+
+          const description = document.createElement('td');
+          description.textContent = row.description;
+          tr.appendChild(description);
+
+          const transactionDateTime = document.createElement('td');
+          transactionDateTime.textContent = row.transactionDateTime;
+          tr.appendChild(transactionDateTime);
+
+          const reference = document.createElement('td');
+          reference.textContent = row.reference;
+          tr.appendChild(reference);
+
+          transactionsTable.appendChild(tr);
+        })
+      })
+      const transactionsModal = new bootstrap.Modal('#transactions');
+      transactionsModal.show();
+    }
+  .container
+    h1 Danh sách tài khoản đã kết nối
+    table.table.table-striped
+      thead
+        tr
+          th Grant ID
+          th Thời gian khởi tạo
+          th 
+      tbody
+        each row in data
+          tr
+            td= row.grantId
+            td= row.time
+            td
+              button.btn.btn-success(onclick=`handleView("${row.grantId}")`) Xem lịch sử
+              button.btn.btn-danger.ms-3(onclick=`handleDelete("${row.grantId}")`) Xoá
+    
+    form.d-flex.justify-content-center(action="/api/link", method="post")
       button.buy.btn.btn-primary Kết nối bankHub
+    
+    .modal.fade#transactions(tabindex=-1)
+      .modal-dialog.modal-dialog-centered.modal-xl.modal-dialog-scrollable
+        .modal-content 
+          .modal-header
+            h1 Thông tin giao dịch 
+          .modal-body
+            h2 Thông tin tài khoản
+            table.table.table-striped
+              thead
+                tr
+                  th Số tài khoản
+                  th Tên tài khoản
+                  th Loại tiền tệ
+                  th Số dư tài khoản
+              tbody#accountsTable
+            h2 Lịch sử giao dịch
+            table.table.table-striped
+              thead
+                tr
+                  th Số tài khoản
+                  th Số tiền
+                  th Nội dung giao dịch
+                  th Thời gian giao dịch 
+                  th Mã tham chiếu
+              tbody#transactionsTable
+            
+
+    .toast-container.position-fixed.bottom-0.end-0.p-5
+        .toast#toast
+          .toast-header.bg-danger
+            strong.me-auto.text-light Error
+            button.btn-close(type='button', data-bs-dismiss='toast', aria-label='Close')
+          .toast-body
+            #toastMessage

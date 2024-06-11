@@ -4,7 +4,8 @@ const db = new sqlite3.Database('database.db');
 db.run(`
   CREATE TABLE IF NOT EXISTS link (
     grantId TEXT PRIMARY KEY,
-    accessToken TEXT NOT NULL UNIQUE
+    accessToken TEXT NOT NULL UNIQUE,
+    time INTEGER NOT NULL
   )`, (err) => {
   if (err) {
     console.error('Error creating table:', err.message);
