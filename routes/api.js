@@ -117,7 +117,43 @@ router.get('/transactions', function(req, res) {
 })
 
 router.delete('/delete', function(req, res) {
-    
+    grantId = req.query.id
+    if (!grantId) {
+        res.status(400).send({
+            message: "Missing grantId"
+        })
+    } else {
+        db.get("SELECT accessToken FROM link WHERE grantId = ?", grantId, (err, row) => {
+            if (err) {
+                res.status(500).send({
+                    message: "Server database error"
+                })
+            }
+            if (!row || !row.accessToken) {
+                res.status(404).send({
+                    message: "Grant ID not found"
+                })
+            }
+            axios({
+                url: `${bankHubUrl}/grant/remove`,
+                method: 'post',
+                baseURL: bankHubUrl,
+                headers: {
+                    'x-client-id': clientId,
+                    'x-secret-key': secretKey,
+                    'Authorization': row.accessToken
+                },
+            }).then((value) => {
+                db.run("DELETE FROM link WHERE grantId = ?", grantId)
+                res.send(value.data)
+            }).catch((reason) => {
+                console.log(reason)
+                res.status(502).send({
+                    message: "Request denied by bankHub"
+                })
+            })
+        })
+    }
 })
 
 module.exports = router

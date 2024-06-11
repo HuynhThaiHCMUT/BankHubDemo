@@ -4,18 +4,36 @@ block content
   script(src='https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js', integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r", crossorigin="anonymous")
   script(src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js', integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy", crossorigin="anonymous")
   script.
+    var data = !{JSON.stringify(data)}
+
     async function handleView(grantId) {
-      res = await fetch(`/api/transactions?id=${grantId}`)
-      body = await res.json()
+      res = await fetch(`/api/transactions?id=${grantId}`);
+      body = await res.json();
       if (res.ok) {
-        showTransactions(body)
+        showTransactions(body);
       } else {
-        showToast(body.message)
+        if (body.message) {
+          showToast(body.message);
+        } else {
+          showToast("Đã có lỗi xảy ra");
+        }
+        
       }
     }
 
     async function handleDelete(grantId) {
-      fetch(`/api/delete?id=${grantId}`, {method: 'DELETE'});
+      res = await fetch(`/api/delete?id=${grantId}`, {method: 'DELETE'});
+      body = await res.json();
+      if (res.ok) {
+        document.getElementById('linkTable').deleteRow(data.findIndex((value) => value.grantId == grantId) + 1)
+        showToast("Xoá kết nối thành công")
+      } else {
+        if (body.state) {
+          showToast(body.state);
+        } else {
+          showToast("Đã có lỗi xảy ra");
+        }
+      }
     }
 
     function showToast(message) {
@@ -83,7 +101,7 @@ block content
     }
   .container
     h1 Danh sách tài khoản đã kết nối
-    table.table.table-striped
+    table.table.table-striped#linkTable
       thead
         tr
           th Grant ID
