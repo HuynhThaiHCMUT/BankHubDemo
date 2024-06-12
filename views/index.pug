@@ -56,7 +56,32 @@ block content
           showSuccessToast("Thanh toán thành công");
         }
       })
-      
+    }
+
+    async function createQRCode() {
+      grantId = currGrantId
+      const qrCode = document.getElementById('qrCode');
+      const amount = document.getElementById('qrPayAmount').value;
+      const desc = document.getElementById('qrPayDesc').value;
+
+      res = await fetch('/api/qrpay', {
+        method: 'POST', 
+        body: JSON.stringify({id: grantId, amount: amount, desc: desc}),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      body = await res.json();
+      if (res.ok) {
+        currDesc = body.desc;
+        qrCode.src = body.qrCode;
+      } else {
+        if (body.message) {
+          showDangerToast(body.message);
+        } else {
+          showDangerToast("Đã có lỗi xảy ra");
+        }
+      }
     }
 
     function showDangerToast(message) {
@@ -131,32 +156,6 @@ block content
       transactionsModal.show();
     }
 
-    async function createQRCode() {
-      grantId = currGrantId
-      const qrCode = document.getElementById('qrCode');
-      const amount = document.getElementById('qrPayAmount').value;
-      const desc = document.getElementById('qrPayDesc').value;
-
-      res = await fetch('/api/qrpay', {
-        method: 'POST', 
-        body: JSON.stringify({id: grantId, amount: amount, desc: desc}),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      body = await res.json();
-      if (res.ok) {
-        currDesc = body.desc;
-        qrCode.src = body.qrCode;
-      } else {
-        if (body.message) {
-          showDangerToast(body.message);
-        } else {
-          showDangerToast("Đã có lỗi xảy ra");
-        }
-        
-      }
-    }
   .container
     h1 Danh sách tài khoản đã kết nối
     table.table.table-striped#linkTable

@@ -131,12 +131,13 @@ router.delete('/delete', function(req, res) {
                     message: "Server database error"
                 })
             }
-            if (!row || !row.accessToken) {
+            else if (!row || !row.accessToken) {
                 res.status(404).send({
                     message: "Grant ID not found"
                 })
             }
-            axios({
+            else {
+                axios({
                 url: '/grant/remove',
                 method: 'post',
                 baseURL: bankHubUrl,
@@ -145,22 +146,23 @@ router.delete('/delete', function(req, res) {
                     'x-secret-key': secretKey,
                     'Authorization': row.accessToken
                 },
-            }).then((value) => {
-                db.run("DELETE FROM link WHERE grantId = ?", grantId, (err, row) => {
-                    if (err) {
-                        res.status(500).send({
-                            message: "Server database error"
-                        })
-                    } else {
-                        res.send(value.data)
-                    }
+                }).then((value) => {
+                    db.run("DELETE FROM link WHERE grantId = ?", grantId, (err, row) => {
+                        if (err) {
+                            res.status(500).send({
+                                message: "Server database error"
+                            })
+                        } else {
+                            res.send(value.data)
+                        }
+                    })
+                }).catch((reason) => {
+                    console.log(reason)
+                    res.status(502).send({
+                        message: reason.response?.data?.errorMessage
+                    })
                 })
-            }).catch((reason) => {
-                console.log(reason)
-                res.status(502).send({
-                    message: reason.response?.data?.errorMessage
-                })
-            })
+            }
         })
     }
 })
