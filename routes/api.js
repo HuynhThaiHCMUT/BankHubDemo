@@ -205,8 +205,10 @@ router.post('/qrpay', function(req, res) {
                         console.error(err);
                         return res.status(500).send('Error generating QR Code');
                     }
-                    res.contentType('image/png'); // Set content type for image
-                    res.send(qrCodeUrl); // Send QR code image data
+                    res.send({
+                        desc: value.data?.qrPay?.description,
+                        qrCode: qrCodeUrl
+                    });
                 });
             }).catch((reason) => {
                 console.log(reason)
@@ -219,7 +221,12 @@ router.post('/qrpay', function(req, res) {
 })
 
 router.post('/webhook', function(req, res) {
-    console.log("Webhook data: " + req.body);
+    console.log("Webhook data: " + JSON.stringify(req.body));
+    const io = req.app.get('socketio');
+    io.emit('paymentReceived', {
+        grantId: req.body.grantId,
+        desc: req.body.transaction?.description
+    })
     res.status(200).send()
 })
 
