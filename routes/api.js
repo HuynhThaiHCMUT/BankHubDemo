@@ -1,5 +1,6 @@
 var express = require('express');
 var axios = require('axios')
+var QRCode = require('qrcode')
 var router = express.Router()
 require('dotenv').config()
 
@@ -16,7 +17,7 @@ if (!clientId || !secretKey) {
 
 router.post('/link', function(req, res) {
     axios({
-        url: `${bankHubUrl}/grant/token`,
+        url: '/grant/token',
         method: 'post',
         baseURL: bankHubUrl,
         headers: {
@@ -24,7 +25,7 @@ router.post('/link', function(req, res) {
             'x-secret-key': secretKey
         },
         data: {
-            "scopes": "transaction",
+            "scopes": "transaction,qrpay",
             "redirectUri": "http://localhost:3000/api/callback",
             "language": "vi"
         }
@@ -41,7 +42,7 @@ router.get('/callback', function(req, res) {
       res.redirect('../cancel?type=cancel');
     } else {
         axios({
-            url: `${bankHubUrl}/grant/exchange`,
+            url: '/grant/exchange',
             method: 'post',
             baseURL: bankHubUrl,
             headers: {
@@ -90,28 +91,29 @@ router.get('/transactions', function(req, res) {
                     message: "Server database error"
                 })
             }
-            if (!row || !row.accessToken) {
+            else if (!row || !row.accessToken) {
                 res.status(404).send({
                     message: "Grant ID not found"
                 })
-            }
-            axios({
-                url: `${bankHubUrl}/transactions`,
-                method: 'get',
-                baseURL: bankHubUrl,
-                headers: {
-                    'x-client-id': clientId,
-                    'x-secret-key': secretKey,
-                    'Authorization': row.accessToken
-                },
-            }).then((value) => {
-                res.send(value.data)
-            }).catch((reason) => {
-                console.log(reason)
-                res.status(502).send({
-                    message: "Can't get transactions data from bankHub"
+            } else {
+                axios({
+                    url: '/transactions',
+                    method: 'get',
+                    baseURL: bankHubUrl,
+                    headers: {
+                        'x-client-id': clientId,
+                        'x-secret-key': secretKey,
+                        'Authorization': row.accessToken
+                    },
+                }).then((value) => {
+                    res.send(value.data)
+                }).catch((reason) => {
+                    console.log(reason)
+                    res.status(502).send({
+                        message: reason.response?.data?.errorMessage
+                    })
                 })
-            })
+            }
         })
     }
 })
@@ -135,7 +137,7 @@ router.delete('/delete', function(req, res) {
                 })
             }
             axios({
-                url: `${bankHubUrl}/grant/remove`,
+                url: '/grant/remove',
                 method: 'post',
                 baseURL: bankHubUrl,
                 headers: {
@@ -144,16 +146,81 @@ router.delete('/delete', function(req, res) {
                     'Authorization': row.accessToken
                 },
             }).then((value) => {
-                db.run("DELETE FROM link WHERE grantId = ?", grantId)
-                res.send(value.data)
+                db.run("DELETE FROM link WHERE grantId = ?", grantId, (err, row) => {
+                    if (err) {
+                        res.status(500).send({
+                            message: "Server database error"
+                        })
+                    } else {
+                        res.send(value.data)
+                    }
+                })
             }).catch((reason) => {
                 console.log(reason)
                 res.status(502).send({
-                    message: "Request denied by bankHub"
+                    message: reason.response?.data?.errorMessage
                 })
             })
         })
     }
+})
+
+router.post('/qrpay', function(req, res) {
+    grantId = req.body.id
+    amount = req.body.amount
+    desc = req.body.desc
+    if (!grantId || !amount || ! desc) {
+        res.status(400).send({
+            message: "Thông tin được điền không đầy đủ"
+        })
+    } else {
+        db.get("SELECT accessToken FROM link WHERE grantId = ?", grantId, (err, row) => {
+            if (err) {
+                res.status(500).send({
+                    message: "Server database error"
+                })
+            }
+            if (!row || !row.accessToken) {
+                res.status(404).send({
+                    message: "Grant ID not found"
+                })
+            }
+            axios({
+                url: '/qr-pay',
+                method: 'post',
+                baseURL: bankHubUrl,
+                headers: {
+                    'x-client-id': clientId,
+                    'x-secret-key': secretKey,
+                    'Authorization': row.accessToken
+                },
+                data: {
+                    'amount': amount,
+                    'description': desc,
+                    'referenceNumber': 'none',
+                }
+            }).then((value) => {
+                QRCode.toDataURL(value.data?.qrPay?.qrCode, (err, qrCodeUrl) => {
+                    if (err) {
+                        console.error(err);
+                        return res.status(500).send('Error generating QR Code');
+                    }
+                    res.contentType('image/png'); // Set content type for image
+                    res.send(qrCodeUrl); // Send QR code image data
+                });
+            }).catch((reason) => {
+                console.log(reason)
+                res.status(502).send({
+                    message: reason.response?.data?.errorMessage
+                })
+            })
+        })
+    }
+})
+
+router.post('/webhook', function(req, res) {
+    console.log("Webhook data: " + req.body);
+    res.status(200).send()
 })
 
 module.exports = router
